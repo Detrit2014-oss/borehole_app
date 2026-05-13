@@ -23,11 +23,11 @@ class _BoreholeEditorScreenState extends State<BoreholeEditorScreen> {
   late Borehole _bh;
   bool _hasChanges = false;
 
-  // Постоянные контроллеры для полей ввода (решают проблему прыгающего курсора)
   late TextEditingController _numberCtrl;
   late TextEditingController _elevationCtrl;
   late TextEditingController _gwDepthCtrl;
   late TextEditingController _notesCtrl;
+  late TextEditingController _dateCtrl;
 
   @override
   void initState() {
@@ -37,6 +37,7 @@ class _BoreholeEditorScreenState extends State<BoreholeEditorScreen> {
     _elevationCtrl = TextEditingController(text: _bh.elevation);
     _gwDepthCtrl = TextEditingController(text: _bh.groundwaterDepth);
     _notesCtrl = TextEditingController(text: _bh.notes);
+    _dateCtrl = TextEditingController(text: _bh.date);
   }
 
   @override
@@ -45,6 +46,7 @@ class _BoreholeEditorScreenState extends State<BoreholeEditorScreen> {
     _elevationCtrl.dispose();
     _gwDepthCtrl.dispose();
     _notesCtrl.dispose();
+    _dateCtrl.dispose();
     super.dispose();
   }
 
@@ -55,18 +57,19 @@ class _BoreholeEditorScreenState extends State<BoreholeEditorScreen> {
     });
   }
 
-  void _save() {
-    // Обновляем данные из контроллеров перед сохранением
-    final finalBh = _bh.copyWith(
+  Borehole _syncFromControllers() {
+    return _bh.copyWith(
       number: _numberCtrl.text,
       elevation: _elevationCtrl.text,
       groundwaterDepth: _gwDepthCtrl.text,
       notes: _notesCtrl.text,
     );
-    Navigator.pop(context, finalBh);
   }
 
-  // ─── Layer CRUD ───
+  void _save() {
+    final finalBh = _syncFromControllers();
+    Navigator.pop(context, finalBh);
+  }
 
   void _addLayer() {
     final lastTo = _bh.layers.isEmpty ? 0.0 : _bh.layers.last.depthTo;
@@ -146,20 +149,33 @@ class _BoreholeEditorScreenState extends State<BoreholeEditorScreen> {
                     width: double.infinity,
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color:
-                          thickness > 0 ? Colors.green[50] : Colors.grey[100],
+                      color: thickness > 0
+                          ? Colors.green[50]
+                          : (to > 0 && to <= from)
+                              ? Colors.red[50]
+                              : Colors.grey[100],
                       borderRadius: BorderRadius.circular(8),
                       border: Border.all(
                           color: thickness > 0
                               ? Colors.green[200]!
-                              : Colors.grey[300]!),
+                              : (to > 0 && to <= from)
+                                  ? Colors.red[200]!
+                                  : Colors.grey[300]!),
                     ),
                     child: Text(
-                      'Мощность: ${thickness > 0 ? thickness.toStringAsFixed(2) : '—'} м',
+                      to > 0 && to <= from
+                          ? '⚠️ Ошибка: глубина «до» должна быть больше «от»'
+                          : thickness > 0
+                              ? 'Мощность: ${thickness.toStringAsFixed(2)} м'
+                              : 'Мощность: — м',
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 15,
-                        color: thickness > 0 ? Colors.green[700] : Colors.grey,
+                        color: to > 0 && to <= from
+                            ? Colors.red[700]
+                            : thickness > 0
+                                ? Colors.green[700]
+                                : Colors.grey,
                       ),
                     ),
                   ),
@@ -184,13 +200,27 @@ class _BoreholeEditorScreenState extends State<BoreholeEditorScreen> {
                   child: const Text('Отмена')),
               FilledButton(
                 onPressed: () {
-                  final layer = Layer(
-                    id: DateTime.now().millisecondsSinceEpoch.toString(),
+                  final depthFrom = double.tryParse(fromCtrl.text) ?? 0;
+                  final depthTo = double.tryParse(toCtrl.text) ?? 0;
+
+                  if (depthTo <= depthFrom) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text(
+                            'Ошибка: глубина «до» должна быть больше «от»'),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                    return;
+                  }
+
+                  final layer = Layer.create(
                     soilType: selectedSoil,
-                    depthFrom: double.tryParse(fromCtrl.text) ?? 0,
-                    depthTo: double.tryParse(toCtrl.text) ?? 0,
+                    depthFrom: depthFrom,
+                    depthTo: depthTo,
                     sampleDepth: sampleCtrl.text.trim(),
                   );
+                  _bh = _syncFromControllers();
                   _update(_bh.copyWith(layers: [..._bh.layers, layer]));
                   Navigator.pop(ctx);
                 },
@@ -277,20 +307,33 @@ class _BoreholeEditorScreenState extends State<BoreholeEditorScreen> {
                     width: double.infinity,
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color:
-                          thickness > 0 ? Colors.green[50] : Colors.grey[100],
+                      color: thickness > 0
+                          ? Colors.green[50]
+                          : (to > 0 && to <= from)
+                              ? Colors.red[50]
+                              : Colors.grey[100],
                       borderRadius: BorderRadius.circular(8),
                       border: Border.all(
                           color: thickness > 0
                               ? Colors.green[200]!
-                              : Colors.grey[300]!),
+                              : (to > 0 && to <= from)
+                                  ? Colors.red[200]!
+                                  : Colors.grey[300]!),
                     ),
                     child: Text(
-                      'Мощность: ${thickness > 0 ? thickness.toStringAsFixed(2) : '—'} м',
+                      to > 0 && to <= from
+                          ? '⚠️ Ошибка: глубина «до» должна быть больше «от»'
+                          : thickness > 0
+                              ? 'Мощность: ${thickness.toStringAsFixed(2)} м'
+                              : 'Мощность: — м',
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 15,
-                        color: thickness > 0 ? Colors.green[700] : Colors.grey,
+                        color: to > 0 && to <= from
+                            ? Colors.red[700]
+                            : thickness > 0
+                                ? Colors.green[700]
+                                : Colors.grey,
                       ),
                     ),
                   ),
@@ -315,11 +358,25 @@ class _BoreholeEditorScreenState extends State<BoreholeEditorScreen> {
                   child: const Text('Отмена')),
               FilledButton(
                 onPressed: () {
+                  final depthFrom = double.tryParse(fromCtrl.text) ?? 0;
+                  final depthTo = double.tryParse(toCtrl.text) ?? 0;
+
+                  if (depthTo <= depthFrom) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text(
+                            'Ошибка: глубина «до» должна быть больше «от»'),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                    return;
+                  }
+
                   final newLayers = List<Layer>.from(_bh.layers);
                   newLayers[index] = layer.copyWith(
                     soilType: selectedSoil,
-                    depthFrom: double.tryParse(fromCtrl.text) ?? 0,
-                    depthTo: double.tryParse(toCtrl.text) ?? 0,
+                    depthFrom: depthFrom,
+                    depthTo: depthTo,
                     sampleDepth: sampleCtrl.text.trim(),
                   );
                   _update(_bh.copyWith(layers: newLayers));
@@ -335,21 +392,50 @@ class _BoreholeEditorScreenState extends State<BoreholeEditorScreen> {
   }
 
   void _deleteLayer(int index) {
-    final newLayers = List<Layer>.from(_bh.layers)..removeAt(index);
-    _update(_bh.copyWith(layers: newLayers));
+    final layer = _bh.layers[index];
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Удалить слой?'),
+        content: Text(
+            'Слой ${index + 1}: ${layer.soilType} (${layer.depthFrom.toStringAsFixed(1)}–${layer.depthTo.toStringAsFixed(1)} м)'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx), child: const Text('Отмена')),
+          TextButton(
+            onPressed: () {
+              final newLayers = List<Layer>.from(_bh.layers)..removeAt(index);
+              _update(_bh.copyWith(layers: newLayers));
+              Navigator.pop(ctx);
+            },
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Удалить'),
+          ),
+        ],
+      ),
+    );
   }
 
   void _moveLayer(int index, int offset) {
     final target = index + offset;
     if (target < 0 || target >= _bh.layers.length) return;
+
     final newLayers = List<Layer>.from(_bh.layers);
-    final temp = newLayers[index];
-    newLayers[index] = newLayers[target];
-    newLayers[target] = temp;
+
+    final tempSoilType = newLayers[index].soilType;
+    final tempSampleDepth = newLayers[index].sampleDepth;
+
+    newLayers[index] = newLayers[index].copyWith(
+      soilType: newLayers[target].soilType,
+      sampleDepth: newLayers[target].sampleDepth,
+    );
+    newLayers[target] = newLayers[target].copyWith(
+      soilType: tempSoilType,
+      sampleDepth: tempSampleDepth,
+    );
+
     _update(_bh.copyWith(layers: newLayers));
   }
-
-  // ═══ Build ═══
 
   @override
   Widget build(BuildContext context) {
@@ -525,7 +611,7 @@ class _BoreholeEditorScreenState extends State<BoreholeEditorScreen> {
         const SizedBox(width: 12),
         Expanded(
           child: TextField(
-            controller: TextEditingController(text: _bh.date),
+            controller: _dateCtrl,
             decoration: const InputDecoration(
                 labelText: 'Дата бурения',
                 border: OutlineInputBorder(),
@@ -538,12 +624,14 @@ class _BoreholeEditorScreenState extends State<BoreholeEditorScreen> {
                 initialDate: _bh.date.isNotEmpty
                     ? DateTime.tryParse(_bh.date) ?? DateTime.now()
                     : DateTime.now(),
-                firstDate: DateTime(2020),
-                lastDate: DateTime(2030),
+                firstDate: DateTime(2000),
+                lastDate: DateTime(2040),
               );
               if (d != null && mounted) {
+                final dateStr = d.toIso8601String().split('T')[0];
+                _dateCtrl.text = dateStr;
                 setState(() {
-                  _bh = _bh.copyWith(date: d.toIso8601String().split('T')[0]);
+                  _bh = _bh.copyWith(date: dateStr);
                   _hasChanges = true;
                 });
               }
@@ -620,12 +708,12 @@ class _BoreholeEditorScreenState extends State<BoreholeEditorScreen> {
             DataCell(Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
-                  color: Colors.green[50],
+                  color: t > 0 ? Colors.green[50] : Colors.red[50],
                   borderRadius: BorderRadius.circular(12)),
-              child: Text(t > 0 ? t.toStringAsFixed(2) : '—',
+              child: Text(t > 0 ? t.toStringAsFixed(2) : '⚠',
                   style: TextStyle(
                       fontWeight: FontWeight.bold,
-                      color: Colors.green[700],
+                      color: t > 0 ? Colors.green[700] : Colors.red[700],
                       fontSize: 12)),
             )),
             DataCell(Text(l.sampleDepth.isEmpty ? '—' : l.sampleDepth)),
@@ -732,7 +820,7 @@ class _BoreholeEditorScreenState extends State<BoreholeEditorScreen> {
           onPressed: (i) {
             setState(() {
               _bh = _bh.copyWith(
-                hasGroundwater: i == 0,
+                hasGroundwater: OptionalBool(i == 0),
                 groundwaterDepth: i == 1 ? '' : _bh.groundwaterDepth,
               );
               if (i == 1) _gwDepthCtrl.clear();

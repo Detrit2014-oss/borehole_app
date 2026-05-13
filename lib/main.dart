@@ -6,6 +6,11 @@ import 'project_detail_screen.dart';
 import 'soil_manager_screen.dart';
 
 void main() {
+  // Глобальный обработчик неперехваченных ошибок Flutter
+  FlutterError.onError = (details) {
+    debugPrint('FlutterError: ${details.exceptionAsString()}');
+  };
+
   runApp(const BoreholeApp());
 }
 
@@ -38,6 +43,7 @@ class _HomeScreenState extends State<HomeScreen> {
   List<Project> _projects = [];
   List<String> _soilTypes = [];
   bool _loading = true;
+  String? _loadError;
 
   @override
   void initState() {
@@ -46,14 +52,24 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _loadData() async {
-    final projects = await loadProjects();
-    final soilTypes = await loadSoilTypes();
-    if (mounted) {
-      setState(() {
-        _projects = projects;
-        _soilTypes = soilTypes;
-        _loading = false;
-      });
+    try {
+      final projects = await loadProjects();
+      final soilTypes = await loadSoilTypes();
+      if (mounted) {
+        setState(() {
+          _projects = projects;
+          _soilTypes = soilTypes;
+          _loading = false;
+          _loadError = null;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _loading = false;
+          _loadError = 'Ошибка загрузки данных: $e';
+        });
+      }
     }
   }
 
@@ -83,7 +99,7 @@ class _HomeScreenState extends State<HomeScreen> {
           },
           onDelete: () {
             setState(() {
-              _projects.removeWhere((p) => p.id == project.id);
+              _projects = _projects.where((p) => p.id != project.id).toList();
             });
             _persist();
             Navigator.pop(context);
@@ -120,18 +136,49 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
-          : ProjectsScreen(
-              projects: _projects,
-              onAddProject: (project) {
-                setState(() => _projects.insert(0, project));
-                _persist();
-              },
-              onDeleteProject: (id) {
-                setState(() => _projects.removeWhere((p) => p.id == id));
-                _persist();
-              },
-              onSelectProject: _openProject,
-            ),
+          : _loadError != null
+              ? Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(32),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.error_outline,
+                            size: 64, color: Colors.red),
+                        const SizedBox(height: 16),
+                        Text(_loadError!,
+                            style: const TextStyle(color: Colors.red),
+                            textAlign: TextAlign.center),
+                        const SizedBox(height: 16),
+                        FilledButton.icon(
+                          onPressed: () {
+                            setState(() {
+                              _loading = true;
+                              _loadError = null;
+                            });
+                            _loadData();
+                          },
+                          icon: const Icon(Icons.refresh),
+                          label: const Text('Повторить'),
+                        ),
+                      ],
+                    ),
+                  ),
+                )
+              : ProjectsScreen(
+                  projects: _projects,
+                  onAddProject: (project) {
+                    setState(() => _projects = [project, ..._projects]);
+                    _persist();
+                  },
+                  onDeleteProject: (id) {
+                    setState(() {
+                      _projects = _projects.where((p) => p.id != id).toList();
+                    });
+                    _persist();
+                  },
+                  onSelectProject: _openProject,
+                ),
     );
   }
 }

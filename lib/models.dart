@@ -19,6 +19,9 @@ class Layer {
 
   double get thickness => depthTo - depthFrom;
 
+  /// Валидация: глубина «до» должна быть больше «от»
+  bool get isValid => depthTo > depthFrom;
+
   Map<String, dynamic> toJson() => {
         'id': id,
         'soilType': soilType,
@@ -49,6 +52,30 @@ class Layer {
         depthTo: depthTo ?? this.depthTo,
         sampleDepth: sampleDepth ?? this.sampleDepth,
       );
+
+  /// Фабричный метод — использует UUID вместо миллисекунд
+  static Layer create({
+    required String soilType,
+    required double depthFrom,
+    required double depthTo,
+    String sampleDepth = '',
+  }) =>
+      Layer(
+        id: _uuid.v4(),
+        soilType: soilType,
+        depthFrom: depthFrom,
+        depthTo: depthTo,
+        sampleDepth: sampleDepth,
+      );
+}
+
+/// Обёртка для nullable bool, позволяющая различать null/true/false
+/// Нужна для copyWith, где hasGroundwater может быть сброшен в null
+class OptionalBool {
+  final bool? value;
+  const OptionalBool(this.value);
+  const OptionalBool.absent() : value = null;
+  bool get isPresent => value != null;
 }
 
 class Borehole {
@@ -107,13 +134,14 @@ class Borehole {
         updatedAt: (json['updatedAt'] as String?) ?? '',
       );
 
+  /// copyWith поддерживает сброс hasGroundwater в null через OptionalBool
   Borehole copyWith({
     String? id,
     String? number,
     String? date,
     String? elevation,
     List<Layer>? layers,
-    bool? hasGroundwater,
+    OptionalBool? hasGroundwater,
     String? groundwaterDepth,
     String? notes,
     String? createdAt,
@@ -125,7 +153,8 @@ class Borehole {
         date: date ?? this.date,
         elevation: elevation ?? this.elevation,
         layers: layers ?? List<Layer>.from(this.layers),
-        hasGroundwater: hasGroundwater ?? this.hasGroundwater,
+        hasGroundwater:
+            hasGroundwater != null ? hasGroundwater.value : this.hasGroundwater,
         groundwaterDepth: groundwaterDepth ?? this.groundwaterDepth,
         notes: notes ?? this.notes,
         createdAt: createdAt ?? this.createdAt,

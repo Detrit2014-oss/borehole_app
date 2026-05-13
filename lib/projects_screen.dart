@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import 'models.dart';
+import 'utils.dart';
 
 class ProjectsScreen extends StatelessWidget {
   final List<Project> projects;
@@ -138,7 +138,7 @@ class ProjectsScreen extends StatelessWidget {
                           Icon(Icons.calendar_today,
                               size: 14, color: Colors.grey[400]),
                           const SizedBox(width: 4),
-                          Text(_fmtDate(p.createdAt),
+                          Text(formatDate(p.createdAt),
                               style: TextStyle(
                                   fontSize: 12, color: Colors.grey[400])),
                         ]),
@@ -152,14 +152,6 @@ class ProjectsScreen extends StatelessWidget {
         ),
       ],
     );
-  }
-
-  String _fmtDate(String iso) {
-    try {
-      return DateFormat('dd.MM.yyyy').format(DateTime.parse(iso));
-    } catch (_) {
-      return '—';
-    }
   }
 
   void _confirmDelete(BuildContext context, Project p) {

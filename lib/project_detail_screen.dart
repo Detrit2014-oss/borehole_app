@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import 'models.dart';
 import 'borehole_editor_screen.dart';
 import 'pdf_service.dart';
+import 'utils.dart';
 
 class ProjectDetailScreen extends StatefulWidget {
   final Project project;
@@ -74,8 +75,8 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
                 final d = await showDatePicker(
                   context: context,
                   initialDate: DateTime.now(),
-                  firstDate: DateTime(2020),
-                  lastDate: DateTime(2030),
+                  firstDate: DateTime(2000),
+                  lastDate: DateTime(2040),
                 );
                 if (d != null) {
                   dateCtrl.text = DateFormat('yyyy-MM-dd').format(d);
@@ -309,7 +310,7 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
                                       spacing: 10,
                                       children: [
                                         _chip(Icons.calendar_today,
-                                            _fmtDate(bh.date)),
+                                            formatDate(bh.date)),
                                         _chip(Icons.layers,
                                             '${bh.layers.length} слоёв'),
                                         _chip(Icons.straighten,
@@ -367,13 +368,5 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
         Text(text, style: TextStyle(fontSize: 11, color: Colors.grey[500])),
       ],
     );
-  }
-
-  String _fmtDate(String iso) {
-    try {
-      return DateFormat('dd.MM.yyyy').format(DateTime.parse(iso));
-    } catch (_) {
-      return '—';
-    }
   }
 }

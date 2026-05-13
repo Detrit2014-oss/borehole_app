@@ -79,7 +79,7 @@ class _SoilManagerScreenState extends State<SoilManagerScreen> {
 
                 if (_editingIndex == index) {
                   return Card(
-                    key: ValueKey('edit_$index'),
+                    key: ValueKey('edit_${item.hashCode}_$index'),
                     margin: const EdgeInsets.only(bottom: 4),
                     color: Colors.blue[50],
                     child: ListTile(
@@ -109,7 +109,7 @@ class _SoilManagerScreenState extends State<SoilManagerScreen> {
                 }
 
                 return Card(
-                  key: ValueKey(index),
+                  key: ValueKey('soil_${item.hashCode}_$index'),
                   margin: const EdgeInsets.only(bottom: 4),
                   child: ListTile(
                     dense: true,
@@ -150,6 +150,7 @@ class _SoilManagerScreenState extends State<SoilManagerScreen> {
               itemCount: _list.length,
               onReorder: (old, neu) {
                 setState(() {
+                  _editingIndex = null;
                   if (neu > old) neu--;
                   final item = _list.removeAt(old);
                   _list.insert(neu, item);
